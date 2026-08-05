@@ -57,6 +57,13 @@ async function writeCached(videoId, entry) {
   await chrome.storage.local.set({ summaries: cache });
 }
 
+async function deleteCached(videoId) {
+  const cache = await getCache();
+  if (!(videoId in cache)) return;
+  delete cache[videoId];
+  await chrome.storage.local.set({ summaries: cache });
+}
+
 /* ---------------------------------------------------------------------------
  * Gemini API
  * ------------------------------------------------------------------------ */

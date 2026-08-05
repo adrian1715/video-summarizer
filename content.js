@@ -39,7 +39,9 @@ const VIDEO_CONTAINERS = [
 
 // Containers that stand for the page's own video: there's no thumbnail link
 // inside them, so the address bar is the only source of the ID.
-const SELF_CONTAINERS = ["ytd-watch-metadata", "ytd-reel-video-renderer"].join(",");
+const SELF_CONTAINERS = ["ytd-watch-metadata", "ytd-reel-video-renderer"].join(
+  ",",
+);
 
 const LINK_SELECTOR = [
   "a#thumbnail[href]",
@@ -48,7 +50,12 @@ const LINK_SELECTOR = [
   'a[href*="/shorts/"]',
 ].join(",");
 
-const TITLE_SELECTOR = ["#video-title", "#video-title-link", "h3 a", "a.yt-lockup-metadata-view-model__title"].join(",");
+const TITLE_SELECTOR = [
+  "#video-title",
+  "#video-title-link",
+  "h3 a",
+  "a.yt-lockup-metadata-view-model__title",
+].join(",");
 
 // The list the row is appended to. YouTube has more than one menu component in
 // flight, so this covers the classic Polymer dropdown and the newer view-model
@@ -101,14 +108,18 @@ function icon(path, size) {
 }
 
 const LIST_ICON = "M3 6h18v2H3V6Zm0 5h12v2H3v-2Zm0 5h18v2H3v-2Z";
-const CLOSE_ICON = "M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z";
+const CLOSE_ICON =
+  "M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z";
 
 /* ---------------------------------------------------------------------------
  * Working out which video a click belongs to
  * ------------------------------------------------------------------------ */
 
 function videoFromClick(event) {
-  const path = typeof event.composedPath === "function" ? event.composedPath() : [event.target];
+  const path =
+    typeof event.composedPath === "function"
+      ? event.composedPath()
+      : [event.target];
 
   for (const node of path) {
     if (!(node instanceof Element)) continue;
@@ -131,7 +142,9 @@ function videoFromContainer(container) {
   if (!videoId) return null;
 
   const titleNode = container.querySelector(TITLE_SELECTOR);
-  const title = titleNode ? titleNode.getAttribute("title") || titleNode.textContent : "";
+  const title = titleNode
+    ? titleNode.getAttribute("title") || titleNode.textContent
+    : "";
   return { videoId, title: cleanTitle(title) };
 }
 
@@ -174,8 +187,12 @@ function waitForMenu() {
       // say), so this is diagnostics-only.
       debug("no menu appeared within", MENU_WAIT_MS + "ms.", {
         video: pending.videoId,
-        matched: [...document.querySelectorAll(MENU_LIST_SELECTORS)].map(describeNode),
-        popupContainer: [...document.querySelectorAll("ytd-popup-container > *")].map(describeNode),
+        matched: [...document.querySelectorAll(MENU_LIST_SELECTORS)].map(
+          describeNode,
+        ),
+        popupContainer: [
+          ...document.querySelectorAll("ytd-popup-container > *"),
+        ].map(describeNode),
       });
       return;
     }
@@ -189,7 +206,9 @@ function waitForMenu() {
 }
 
 const describeNode = (node) =>
-  node.tagName.toLowerCase() + (node.id ? "#" + node.id : "") + (node.getClientRects().length ? " [visible]" : " [hidden]");
+  node.tagName.toLowerCase() +
+  (node.id ? "#" + node.id : "") +
+  (node.getClientRects().length ? " [visible]" : " [hidden]");
 
 function injectMenuItem(list, video) {
   const item = h(
@@ -197,7 +216,7 @@ function injectMenuItem(list, video) {
     // role="option": the row sits inside YouTube's own listbox.
     { class: ITEM_CLASS, role: "option", tabindex: "0" },
     h("span", { class: "ytqs-menu-icon" }, icon(LIST_ICON, 24)),
-    h("span", { class: "ytqs-menu-label", text: "Summarize video" })
+    h("span", { class: "ytqs-menu-label", text: "Summarize" }),
   );
 
   item.dataset.videoId = video.videoId;
@@ -234,7 +253,11 @@ function injectMenuItem(list, video) {
  * knowledge of which theme is active. content.css only holds the fallbacks.
  * ------------------------------------------------------------------------ */
 
-const SAMPLE_ROW = ["ytd-menu-service-item-renderer", "ytd-menu-navigation-item-renderer", "yt-list-item-view-model"].join(",");
+const SAMPLE_ROW = [
+  "ytd-menu-service-item-renderer",
+  "ytd-menu-navigation-item-renderer",
+  "yt-list-item-view-model",
+].join(",");
 
 // The element actually holding a row's text: a leaf with something in it.
 function leafTextNode(root) {
@@ -248,7 +271,10 @@ function matchNativeStyle(item, list) {
   // Hover is a state, so it can't be read off a sibling — derive it from the
   // theme the same way the modal does.
   const dark = document.documentElement.hasAttribute("dark");
-  item.style.setProperty("--ytqs-hover", dark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)");
+  item.style.setProperty(
+    "--ytqs-hover",
+    dark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)",
+  );
   item.style.color = dark ? "#f1f1f1" : "#0f0f0f";
 
   const sample = list.querySelector(SAMPLE_ROW);
@@ -349,7 +375,9 @@ function closeYouTubeMenu(node) {
   const dropdown = node.closest("tp-yt-iron-dropdown");
   if (dropdown) dropdown.dispatchEvent(escape());
   document.dispatchEvent(escape());
-  document.dispatchEvent(new CustomEvent("yt-close-popups", { bubbles: true, composed: true }));
+  document.dispatchEvent(
+    new CustomEvent("yt-close-popups", { bubbles: true, composed: true }),
+  );
 }
 
 function noteClick(event) {
@@ -613,7 +641,11 @@ function buildModal() {
   style.textContent = MODAL_CSS;
 
   const titleNode = h("div", { class: "title", id: "ytqs-title" });
-  const close = h("button", { class: "close", type: "button", "aria-label": "Close" }, icon(CLOSE_ICON, 18));
+  const close = h(
+    "button",
+    { class: "close", type: "button", "aria-label": "Close" },
+    icon(CLOSE_ICON, 18),
+  );
 
   const loading = h(
     "div",
@@ -623,27 +655,44 @@ function buildModal() {
       "div",
       {},
       h("div", { class: "loading-title", text: "Watching the video…" }),
-      h("div", { class: "loading-sub", text: "Gemini processes the full video, so this can take a while." })
-    )
+      h("div", {
+        class: "loading-sub",
+        text: "Gemini processes the full video, so this can take a while.",
+      }),
+    ),
   );
 
   const error = h("div", { class: "error hidden", role: "alert" });
   const summary = h("article", { class: "summary hidden" });
   const meta = h("span", {});
-  const again = h("button", { class: "link-btn hidden", type: "button", text: "Re-summarize" });
+  const again = h("button", {
+    class: "link-btn hidden",
+    type: "button",
+    text: "Re-summarize",
+  });
 
   const dialog = h(
     "div",
-    { class: "dialog", role: "dialog", "aria-modal": "true", "aria-labelledby": "ytqs-title" },
+    {
+      class: "dialog",
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-labelledby": "ytqs-title",
+    },
     h(
       "div",
       { class: "head" },
       h("span", { class: "dot" }),
-      h("div", { class: "head-text" }, h("div", { class: "kicker", text: "YT Quick Summary" }), titleNode),
-      close
+      h(
+        "div",
+        { class: "head-text" },
+        h("div", { class: "kicker", text: "YT Quick Summary" }),
+        titleNode,
+      ),
+      close,
     ),
     h("div", { class: "body" }, loading, error, summary),
-    h("div", { class: "foot" }, meta, again)
+    h("div", { class: "foot" }, meta, again),
   );
 
   const backdrop = h("div", { class: "backdrop" }, dialog);
@@ -684,7 +733,10 @@ function ensureModal() {
 const show = (node, visible) => node.classList.toggle("hidden", !visible);
 
 function showError(title, detail) {
-  modal.error.replaceChildren(h("strong", { text: title }), detail ? h("div", { class: "detail", text: detail }) : null);
+  modal.error.replaceChildren(
+    h("strong", { text: title }),
+    detail ? h("div", { class: "detail", text: detail }) : null,
+  );
   show(modal.error, true);
 }
 
@@ -695,7 +747,9 @@ function openModal(videoId, title) {
   modal.returnFocus = document.activeElement;
 
   modal.titleNode.textContent = modal.videoTitle;
-  modal.host.dataset.theme = document.documentElement.hasAttribute("dark") ? "dark" : "light";
+  modal.host.dataset.theme = document.documentElement.hasAttribute("dark")
+    ? "dark"
+    : "light";
   modal.host.hidden = false;
 
   // Keep the page from scrolling behind the dialog.
@@ -713,7 +767,11 @@ function closeModal() {
   modal.host.hidden = true;
   document.documentElement.style.overflow = modal.priorOverflow || "";
 
-  if (modal.returnFocus && modal.returnFocus.isConnected && typeof modal.returnFocus.focus === "function") {
+  if (
+    modal.returnFocus &&
+    modal.returnFocus.isConnected &&
+    typeof modal.returnFocus.focus === "function"
+  ) {
     modal.returnFocus.focus();
   }
 }
@@ -744,7 +802,9 @@ async function load(videoId, title, force) {
 
   renderSummaryInto(modal.summary, res.entry.summary);
   show(modal.summary, true);
-  modal.meta.textContent = res.cached ? `Cached ${relativeTime(res.entry.timestamp)}` : "Summarized just now";
+  modal.meta.textContent = res.cached
+    ? `Cached ${relativeTime(res.entry.timestamp)}`
+    : "Summarized just now";
   modal.again.textContent = "Re-summarize";
   show(modal.again, true);
 }
@@ -768,7 +828,9 @@ window.addEventListener(
       event.preventDefault();
       event.stopPropagation();
 
-      const stops = [modal.close, modal.again].filter((node) => !node.classList.contains("hidden") && !node.disabled);
+      const stops = [modal.close, modal.again].filter(
+        (node) => !node.classList.contains("hidden") && !node.disabled,
+      );
       const at = stops.indexOf(modal.root.activeElement);
       const next = event.shiftKey ? at - 1 : at + 1;
       stops[((next % stops.length) + stops.length) % stops.length].focus();
@@ -777,7 +839,7 @@ window.addEventListener(
 
     if (event.target === modal.host) event.stopPropagation();
   },
-  true
+  true,
 );
 
 /* ---------------------------------------------------------------------------
@@ -790,18 +852,22 @@ function requestSummary(videoId, title, force) {
       ok: false,
       error: {
         title: "Extension unavailable",
-        detail: "The extension was reloaded or updated. Refresh this page and try again.",
+        detail:
+          "The extension was reloaded or updated. Refresh this page and try again.",
       },
     };
 
     try {
-      chrome.runtime.sendMessage({ type: "summarize", videoId, title, force }, (res) => {
-        if (chrome.runtime.lastError || !res) {
-          resolve(disconnected);
-          return;
-        }
-        resolve(res);
-      });
+      chrome.runtime.sendMessage(
+        { type: "summarize", videoId, title, force },
+        (res) => {
+          if (chrome.runtime.lastError || !res) {
+            resolve(disconnected);
+            return;
+          }
+          resolve(res);
+        },
+      );
     } catch {
       resolve(disconnected);
     }
@@ -811,4 +877,6 @@ function requestSummary(videoId, title, force) {
 // One line, once per page load: content scripts don't enter tabs that were
 // already open when the extension was (re)loaded, and this is the quickest way
 // to tell that apart from a selector that stopped matching.
-console.log("[YT Quick Summary] content script ready — append #ytqs-debug to the URL for menu diagnostics");
+console.log(
+  "[YT Quick Summary] content script ready — append #ytqs-debug to the URL for menu diagnostics",
+);

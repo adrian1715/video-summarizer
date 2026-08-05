@@ -8,8 +8,13 @@
   <body>
     <header class="bar">
       <div class="brand">
-        <span class="dot"></span>
-        <span>YT Quick Summary</span>
+        <button id="back" class="icon-btn hidden" title="Back" aria-label="Back">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+            <path fill="currentColor" d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z" />
+          </svg>
+        </button>
+        <span id="brand-dot" class="dot"></span>
+        <span id="view-title">YT Quick Summary</span>
       </div>
       <button id="settings-toggle" class="icon-btn" title="Settings" aria-label="Settings">
         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
@@ -21,7 +26,8 @@
       </button>
     </header>
 
-    <!-- Settings -->
+    <!-- Settings. Only the key and the cache live here — the current video and
+         its Summarize button belong to the main view, not to both. -->
     <section id="settings" class="panel hidden">
       <label class="label" for="api-key">Gemini API key</label>
       <div class="key-row">
@@ -38,11 +44,14 @@
       </div>
       <p id="settings-status" class="status" role="status"></p>
       <hr />
-      <button id="cache-clear" class="ghost-btn wide">Clear cached summaries</button>
+      <div class="stack">
+        <button id="history-open-settings" class="ghost-btn wide">View history</button>
+        <button id="cache-clear" class="ghost-btn wide">Clear cached summaries</button>
+      </div>
     </section>
 
-    <!-- Main -->
-    <main id="main">
+    <!-- Main: the current tab's video -->
+    <main id="main" class="view">
       <div id="video-box" class="video-box">
         <div id="video-title" class="video-title">Checking current tab…</div>
         <div id="video-id" class="video-id"></div>
@@ -57,6 +66,8 @@
         <button id="resummarize" class="link-btn">Re-summarize</button>
       </div>
 
+      <button id="history-open" class="ghost-btn wide spaced">View history</button>
+
       <div id="loading" class="loading hidden">
         <div class="spinner"></div>
         <div>
@@ -69,6 +80,33 @@
 
       <article id="summary" class="summary hidden"></article>
     </main>
+
+    <!-- History: every cached summary, newest first -->
+    <section id="history" class="view hidden">
+      <input
+        id="history-search"
+        class="search hidden"
+        type="text"
+        placeholder="Search titles and summaries…"
+        spellcheck="false"
+        autocomplete="off"
+      />
+      <ul id="history-list" class="history-list"></ul>
+      <p id="history-empty" class="empty hidden"></p>
+    </section>
+
+    <!-- One cached summary, opened from the history list -->
+    <section id="entry" class="view hidden">
+      <div class="video-box">
+        <div id="entry-title" class="video-title"></div>
+        <div id="entry-meta" class="video-id"></div>
+      </div>
+      <div class="entry-actions">
+        <button id="entry-open" class="link-btn">Open on YouTube</button>
+        <button id="entry-delete" class="link-btn danger">Delete</button>
+      </div>
+      <article id="entry-summary" class="summary"></article>
+    </section>
 
     <script src="shared/video.js"></script>
     <script src="shared/render.js"></script>
