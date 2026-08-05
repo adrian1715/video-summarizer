@@ -1,0 +1,36 @@
+/* The injected menu row. Colour, font, row height and padding are copied off a
+   real menu row at inject time (matchNativeStyle in content.js) — YouTube's
+   own custom properties don't reliably resolve for injected CSS, which is why
+   they aren't used here. Everything below is the fallback for when there's no
+   sample row to measure. */
+
+.ytqs-menu-item {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 16px;
+  cursor: pointer;
+  user-select: none;
+  color: inherit;
+  font-family: "Roboto", "Arial", sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+/* --ytqs-hover is set inline per row from YouTube's current theme. */
+.ytqs-menu-item:hover,
+.ytqs-menu-item:focus-visible {
+  background: var(--ytqs-hover, rgba(128, 128, 128, 0.18));
+  outline: none;
+}
+
+.ytqs-menu-icon {
+  display: flex;
+  flex: none;
+  margin-right: 16px;
+  color: inherit;
+}
+
+.ytqs-menu-label {
+  white-space: nowrap;
+}
