@@ -456,7 +456,7 @@ const MODAL_CSS = `
 .dialog {
   display: flex;
   flex-direction: column;
-  width: min(580px, 100%);
+  width: min(670px, 100%);
   max-height: min(78vh, 720px);
   overflow: hidden;
   border: 1px solid var(--line);
