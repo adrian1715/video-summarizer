@@ -787,7 +787,23 @@ async function load(videoId, title, force) {
   modal.meta.textContent = "";
   modal.again.disabled = true;
 
-  const res = await requestSummary(videoId, title, force);
+  /* Swap the spinner for text the moment the first characters land, then
+   * re-render in place as more arrives. The token check matters per chunk, not
+   * just at the end: chunks for a video the modal has moved on from must not
+   * paint over the current one. */
+  let streaming = false;
+  const onChunk = (text) => {
+    if (token !== openToken || modal.host.hidden) return;
+
+    if (!streaming) {
+      streaming = true;
+      show(modal.loading, false);
+      show(modal.summary, true);
+    }
+    renderSummaryInto(modal.summary, text);
+  };
+
+  const res = await requestSummary(videoId, title, force, onChunk);
   if (token !== openToken || modal.host.hidden) return;
 
   show(modal.loading, false);
@@ -846,7 +862,17 @@ window.addEventListener(
  * Talking to the background worker
  * ------------------------------------------------------------------------ */
 
-function requestSummary(videoId, title, force) {
+// Must match PORT_NAME in background.js. The two can't share a constant:
+// shared/api.js, where such things live, is deliberately never loaded here.
+const PORT_NAME = "ytqs-summarize";
+
+/* Opens a port to the worker and resolves with the final result. `onChunk` is
+ * called with the full text so far as it streams — the worker sends
+ * { type: "chunk" } repeatedly, then exactly one { type: "done" }.
+ *
+ * Any way the port can die early — worker replaced, tab suspended, extension
+ * reloaded — lands on the same "refresh the page" result rather than hanging. */
+function requestSummary(videoId, title, force, onChunk) {
   return new Promise((resolve) => {
     const disconnected = {
       ok: false,
@@ -857,19 +883,49 @@ function requestSummary(videoId, title, force) {
       },
     };
 
+    let settled = false;
+    const finish = (res) => {
+      if (settled) return;
+      settled = true;
+      resolve(res);
+    };
+
+    let port;
     try {
-      chrome.runtime.sendMessage(
-        { type: "summarize", videoId, title, force },
-        (res) => {
-          if (chrome.runtime.lastError || !res) {
-            resolve(disconnected);
-            return;
-          }
-          resolve(res);
-        },
-      );
+      port = chrome.runtime.connect({ name: PORT_NAME });
     } catch {
-      resolve(disconnected);
+      finish(disconnected);
+      return;
+    }
+
+    port.onMessage.addListener((msg) => {
+      if (!msg) return;
+
+      if (msg.type === "chunk") {
+        if (!settled) onChunk(msg.text);
+        return;
+      }
+
+      if (msg.type === "done") {
+        finish(msg.result || disconnected);
+        try {
+          port.disconnect();
+        } catch {
+          /* already gone */
+        }
+      }
+    });
+
+    // Fires if the worker goes away before sending "done"; a no-op afterwards.
+    port.onDisconnect.addListener(() => {
+      void chrome.runtime.lastError;
+      finish(disconnected);
+    });
+
+    try {
+      port.postMessage({ type: "summarize", videoId, title, force });
+    } catch {
+      finish(disconnected);
     }
   });
 }

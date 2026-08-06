@@ -287,7 +287,19 @@ async function runSummarize() {
   setBusy(true);
 
   try {
-    const text = await summarizeVideo(state.videoId, apiKey);
+    /* Streamed: the spinner gives way to text as soon as the first characters
+     * arrive, and the article re-renders in place as more lands. state.busy
+     * stays true throughout, so the buttons remain disabled until it's done. */
+    let streaming = false;
+    const text = await summarizeVideo(state.videoId, apiKey, (partial) => {
+      if (!streaming) {
+        streaming = true;
+        show(el.loading, false);
+        show(el.summary, true);
+      }
+      renderSummaryInto(el.summary, partial);
+    });
+
     const entry = { summary: text, timestamp: Date.now(), title: state.title, model: MODEL };
     await writeCached(state.videoId, entry);
     setBusy(false);

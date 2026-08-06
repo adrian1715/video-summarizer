@@ -8,61 +8,129 @@
  * subject to the page's CORS rules — and keeping the call here means the API
  * key is never loaded into a youtube.com world.
  *
+ * The content script connects a port rather than sending a one-shot message,
+ * because the summary now arrives in pieces: { type: "chunk", text } as it
+ * streams, then exactly one { type: "done", result } carrying the same result
+ * shape the one-shot reply used to.
+ *
  * The popup still calls summarizeVideo() directly; its request is cancelled if
  * the popup closes, which remains an accepted tradeoff there.
  * ------------------------------------------------------------------------ */
 
 importScripts("shared/video.js", "shared/api.js");
 
-// videoId -> in-flight promise, so a double click doesn't buy two summaries.
+// Must match PORT_NAME in content.js — the two can't share a constant, since
+// shared/api.js is deliberately never loaded into the page's world.
+const PORT_NAME = "ytqs-summarize";
+
+/* videoId -> in-flight run, so a double click doesn't buy two summaries.
+ * `text` is what has streamed so far, kept so a listener that joins late can be
+ * caught up in a single message rather than starting from blank. */
 const inFlight = new Map();
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-  if (!msg || msg.type !== "summarize") return undefined;
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== PORT_NAME) return;
 
-  handleSummarize(msg)
-    .catch((err) => fail("Unexpected error", err && err.message ? err.message : String(err)))
-    .then(sendResponse);
+  let live = true;
+  port.onDisconnect.addListener(() => {
+    live = false;
+    void chrome.runtime.lastError;
+  });
 
-  return true; // response is async
+  const send = (payload) => {
+    if (!live) return;
+    try {
+      port.postMessage(payload);
+    } catch {
+      live = false; // tab navigated or closed mid-stream
+    }
+  };
+
+  port.onMessage.addListener((msg) => {
+    if (!msg || msg.type !== "summarize") return;
+
+    handleSummarize(msg, send)
+      .catch((err) =>
+        fail("Unexpected error", err && err.message ? err.message : String(err)),
+      )
+      .then((result) => send({ type: "done", result }));
+  });
 });
 
 const fail = (title, detail) => ({ ok: false, error: { title, detail } });
 
-async function handleSummarize({ videoId, title, force }) {
+async function handleSummarize({ videoId, title, force }, send) {
   if (!isVideoId(videoId)) {
-    return fail("Not a YouTube video", "Couldn't work out which video that menu belongs to.");
+    return fail(
+      "Not a YouTube video",
+      "Couldn't work out which video that menu belongs to.",
+    );
   }
 
   if (!force) {
     const cached = await readCached(videoId);
-    if (cached && cached.summary) return { ok: true, cached: true, entry: cached };
+    if (cached && cached.summary) {
+      return { ok: true, cached: true, entry: cached };
+    }
   }
 
   const apiKey = await getApiKey();
   if (!apiKey) {
     return fail(
       "No API key set",
-      "Click the YT Quick Summary toolbar icon, open settings (gear icon) and add your Gemini API key."
+      "Click the YT Quick Summary toolbar icon, open settings (gear icon) and add your Gemini API key.",
     );
   }
 
-  if (!inFlight.has(videoId)) {
-    inFlight.set(videoId, runSummarize(videoId, title, apiKey).finally(() => inFlight.delete(videoId)));
+  let run = inFlight.get(videoId);
+  if (run) {
+    // Joining a run already under way — catch up on what it has so far.
+    if (run.text) send({ type: "chunk", text: run.text });
+  } else {
+    run = startRun(videoId, title, apiKey);
   }
-  return inFlight.get(videoId);
+
+  const listener = (text) => send({ type: "chunk", text });
+  run.listeners.add(listener);
+  try {
+    return await run.promise;
+  } finally {
+    run.listeners.delete(listener);
+  }
 }
 
-async function runSummarize(videoId, title, apiKey) {
+function startRun(videoId, title, apiKey) {
+  const run = { text: "", listeners: new Set(), promise: null };
+
+  run.promise = runSummarize(videoId, title, apiKey, run).finally(() =>
+    inFlight.delete(videoId),
+  );
+  inFlight.set(videoId, run);
+  return run;
+}
+
+async function runSummarize(videoId, title, apiKey, run) {
   const stopKeepAlive = keepAlive();
   try {
-    const summary = await summarizeVideo(videoId, apiKey);
-    const entry = { summary, timestamp: Date.now(), title: title || "", model: MODEL };
+    const summary = await summarizeVideo(videoId, apiKey, (text) => {
+      run.text = text;
+      for (const listener of run.listeners) listener(text);
+    });
+
+    const entry = {
+      summary,
+      timestamp: Date.now(),
+      title: title || "",
+      model: MODEL,
+    };
     await writeCached(videoId, entry);
     return { ok: true, cached: false, entry };
   } catch (err) {
     if (err instanceof AppError) return fail(err.title, err.detail);
-    return fail("Unexpected error", err && err.message ? err.message : String(err));
+    return fail(
+      "Unexpected error",
+      err && err.message ? err.message : String(err),
+    );
   } finally {
     stopKeepAlive();
   }
@@ -71,7 +139,14 @@ async function runSummarize(videoId, title, apiKey) {
 // A worker goes idle after ~30s without an extension API call, and video
 // understanding routinely takes longer than that. Poking an API on a timer is
 // the documented way to hold it open for the length of the request.
+//
+// A connected port would also hold it, but that isn't enough on its own: a run
+// deliberately outlives its port, so closing the modal partway through still
+// finishes the summary and caches it.
 function keepAlive() {
-  const timer = setInterval(() => chrome.runtime.getPlatformInfo(() => void chrome.runtime.lastError), 20000);
+  const timer = setInterval(
+    () => chrome.runtime.getPlatformInfo(() => void chrome.runtime.lastError),
+    20000,
+  );
   return () => clearInterval(timer);
 }
