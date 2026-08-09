@@ -68,6 +68,16 @@ const MENU_LIST_SELECTORS = [
   "tp-yt-iron-dropdown yt-list-view-model",
 ].join(",");
 
+// Where YouTube renders its popups. A press landing inside one of these is an
+// interaction with a menu that is already open, not the opening of a new one —
+// see noteClick().
+const POPUP_HOSTS = [
+  "tp-yt-iron-dropdown",
+  "ytd-popup-container",
+  "tp-yt-paper-dialog",
+  "yt-sheet-view-model",
+].join(",");
+
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 /* Diagnostics. Append #ytqs-debug to the YouTube URL to get a running account
@@ -380,10 +390,33 @@ function closeYouTubeMenu(node) {
   );
 }
 
+function insidePopup(event) {
+  const path =
+    typeof event.composedPath === "function"
+      ? event.composedPath()
+      : [event.target];
+
+  for (const node of path) {
+    if (node instanceof Element && node.closest(POPUP_HOSTS)) return true;
+  }
+  return false;
+}
+
 function noteClick(event) {
   // Our own row handles itself; tearing it down here would race its click.
   const target = event.target;
   if (target instanceof Element && target.closest("." + ITEM_CLASS)) return;
+
+  /* Never tear the row down mid-press on one of YouTube's own rows. Removing
+   * it (and putting the menu's max-height back) lifts everything below it by a
+   * row, so the row the user pressed on is somewhere else by the time they let
+   * go: the browser then dispatches the click on the list rather than the row,
+   * and YouTube's handler for that item never runs — which is what stopped
+   * "Add to queue", "Save to Watch later" and "Save to playlist" from working.
+   * Waiting for the click event costs nothing: the target is settled by then,
+   * so the same teardown below is harmless, and it still lands before any new
+   * menu can open. */
+  if (event.type === "pointerdown" && insidePopup(event)) return;
 
   removeMenuItem();
   pending = videoFromClick(event);
