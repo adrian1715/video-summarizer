@@ -4,8 +4,11 @@
  * Config, storage and the Gemini call.
  *
  * Loaded as a plain script by the popup and by the background worker
- * (importScripts). Deliberately NOT loaded into the content script: the page's
- * world has no business holding the API key or the endpoint code.
+ * (importScripts), after shared/i18n.js — buildPrompt() and the error paths
+ * below use its t()/languageLabel(). Deliberately NOT loaded into the content
+ * script: the page's world has no business holding the API key or the
+ * endpoint code (shared/i18n.js, which has no secrets, is loaded there
+ * instead, for the content script's own UI strings).
  * ------------------------------------------------------------------------ */
 
 // Verified against ai.google.dev/gemini-api/docs/models (stable) and the
@@ -25,17 +28,25 @@ const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 // Interactions API and is rejected here.
 const THINKING_LEVEL = "low";
 
-const PROMPT = [
-  "Summarize this video.",
-  "",
-  "Format your answer exactly like this, in plain markdown:",
-  "TL;DR: <2-3 sentence summary of what the video covers and its conclusion>",
-  "",
-  "Then a blank line, then 4-8 key points as a bullet list using '- '.",
-  "Each bullet should be one specific, information-dense sentence.",
-  "Prefer concrete claims, numbers, and names over vague description.",
-  "Do not add any other headings, preamble, or closing remarks.",
-].join("\n");
+// The "TL;DR:" and bullet markers are given as literal format tokens, not
+// placeholders — models reliably keep instructed literal markup as-is even
+// when writing the surrounding prose in another language, which is what lets
+// shared/render.js's TLDR_RE keep matching regardless of summary language.
+function buildPrompt(languageName) {
+  return [
+    "Summarize this video.",
+    "",
+    `Write the entire summary in ${languageName}, regardless of the video's own spoken or on-screen language. Keep the literal markers below ("TL;DR:", "- ") exactly as written.`,
+    "",
+    "Format your answer exactly like this, in plain markdown:",
+    "TL;DR: <2-3 sentence summary of what the video covers and its conclusion>",
+    "",
+    "Then a blank line, then 5-7 key points as a bullet list using '- '.",
+    "Each bullet should be one specific, information-dense sentence.",
+    "Prefer concrete claims, numbers, and names over vague description.",
+    "Do not add any other headings, preamble, or closing remarks.",
+  ].join("\n");
+}
 
 // Video understanding runs over the whole video, so this is deliberately long.
 // This caps the whole stream, not just the wait for headers.
@@ -85,6 +96,14 @@ async function deleteCached(videoId) {
 
 /* ---------------------------------------------------------------------------
  * Gemini API
+ *
+ * Language detection/resolution (LANGUAGES, resolveLanguageCode(),
+ * languageLabel(), t()) lives in shared/i18n.js, loaded before this file —
+ * it has no secrets, so the content script uses the same copy for its own
+ * UI strings. summarizeVideo() takes the resolved code, not a name: the
+ * caller resolves it once (mirroring how apiKey is already fetched by the
+ * caller), and everything below derives both the prompt's language name and
+ * error messages from that same code, so the two can never disagree.
  * ------------------------------------------------------------------------ */
 
 class AppError extends Error {
@@ -95,17 +114,18 @@ class AppError extends Error {
   }
 }
 
-function describeApiError(status, body) {
+// Google's own error.message (`msg` below) always arrives in English — we
+// don't control that, so it's appended untranslated to the human-authored,
+// translated part of the detail, exactly where the original English text
+// used to splice it in.
+function describeApiError(status, body, lang) {
   const apiErr = body && body.error ? body.error : {};
   const msg = apiErr.message || "";
   const reason = apiErr.status || "";
   const lower = msg.toLowerCase();
 
   if (status === 400 && /api key not valid|api_key_invalid/i.test(msg)) {
-    return [
-      "Invalid API key",
-      "Check the key in settings, then save it again.",
-    ];
+    return [t(lang, "invalidApiKeyTitle"), t(lang, "invalidApiKeyDetail")];
   }
   if (
     status === 400 &&
@@ -114,60 +134,64 @@ function describeApiError(status, body) {
     )
   ) {
     return [
-      "Gemini couldn't read this video",
-      "Private, unlisted, age-restricted, region-blocked and members-only videos aren't supported — only public ones. " +
-        msg,
+      t(lang, "unsupportedVideoTitle"),
+      t(lang, "unsupportedVideoDetail") + " " + msg,
     ];
   }
   if (status === 400) {
     return [
-      "Request rejected by the API",
-      msg || "The API returned 400 with no detail.",
+      t(lang, "requestRejectedTitle"),
+      msg || t(lang, "requestRejectedFallback"),
     ];
   }
   if (status === 401 || status === 403) {
     if (/generative ?language|api has not been used|disabled/i.test(lower)) {
-      return ["API not enabled for this key", msg];
+      return [t(lang, "apiNotEnabledTitle"), msg];
     }
     return [
-      "API key rejected",
-      msg ||
-        "The key was refused. Confirm it's a Gemini API key from Google AI Studio.",
+      t(lang, "apiKeyRejectedTitle"),
+      msg || t(lang, "apiKeyRejectedFallback"),
     ];
   }
   if (status === 404) {
     return [
-      "Model not found",
-      `"${MODEL}" was rejected as unknown. The model may have been renamed or retired. ${msg}`,
+      t(lang, "modelNotFoundTitle"),
+      t(lang, "modelNotFoundDetail", { model: MODEL }) + " " + msg,
     ];
   }
   if (status === 429) {
     return [
-      "Rate limit or quota exceeded",
-      "The free tier caps YouTube video input at 8 hours per day. Wait and retry, or check your quota in Google AI Studio. " +
-        msg,
+      t(lang, "rateLimitTitle"),
+      t(lang, "rateLimitDetail") + " " + msg,
     ];
   }
   if (status >= 500) {
     return [
-      "Google's API had a problem",
-      `HTTP ${status}${reason ? " " + reason : ""}. This is usually transient — try again. ${msg}`,
+      t(lang, "serverErrorTitle"),
+      t(lang, "serverErrorDetail", {
+        status,
+        reasonPart: reason ? " " + reason : "",
+      }) +
+        " " +
+        msg,
     ];
   }
   return [
-    `Request failed (HTTP ${status})`,
-    msg || reason || "No detail returned.",
+    t(lang, "requestFailedTitle", { status }),
+    msg || reason || t(lang, "requestFailedFallback"),
   ];
 }
 
-const BLOCK_REASONS = {
-  SAFETY: "The response was blocked by Gemini's safety filters.",
-  RECITATION:
-    "The response was blocked because it reproduced protected content.",
-  PROHIBITED_CONTENT: "The response was blocked as prohibited content.",
-  BLOCKLIST: "The response was blocked by a term blocklist.",
-  MAX_TOKENS: "The response hit the output token limit before finishing.",
+const BLOCK_REASON_KEYS = {
+  SAFETY: "blockSafety",
+  RECITATION: "blockRecitation",
+  PROHIBITED_CONTENT: "blockProhibited",
+  BLOCKLIST: "blockBlocklist",
+  MAX_TOKENS: "blockMaxTokens",
 };
+
+const blockReasonMessage = (lang, reason) =>
+  BLOCK_REASON_KEYS[reason] ? t(lang, BLOCK_REASON_KEYS[reason]) : null;
 
 /* One line per API call, so the minute this takes can be attributed rather than
  * guessed at. promptTokenCount is dominated by the video itself (~300 tokens per
@@ -195,22 +219,24 @@ function logTiming(videoId, elapsedMs, usage, firstTextMs) {
   );
 }
 
-function connectionError(err, gotPartialText) {
+function connectionError(err, gotPartialText, lang) {
   if (err.name === "AbortError") {
     return new AppError(
-      "Timed out",
-      `No response after ${Math.round(REQUEST_TIMEOUT_MS / 1000)}s. Long videos can exceed this — try a shorter one, or retry.`,
+      t(lang, "timedOutTitle"),
+      t(lang, "timedOutDetail", {
+        seconds: Math.round(REQUEST_TIMEOUT_MS / 1000),
+      }),
     );
   }
   if (gotPartialText) {
     return new AppError(
-      "Connection lost",
-      `The summary stopped partway through. (${err.message})`,
+      t(lang, "connectionLostTitle"),
+      t(lang, "connectionLostDetail", { message: err.message }),
     );
   }
   return new AppError(
-    "Network error",
-    `Couldn't reach Google's API. Check your connection. (${err.message})`,
+    t(lang, "networkErrorTitle"),
+    t(lang, "networkErrorDetail", { message: err.message }),
   );
 }
 
@@ -257,12 +283,18 @@ async function readSseStream(body, onEvent) {
 
 /* Streams the summary.
  *
+ * `lang` is a resolved language code (e.g. "es") from resolveLanguageCode()
+ * (shared/i18n.js) — resolved by the caller, not in here, mirroring how
+ * apiKey is already fetched by the caller rather than read from storage
+ * inside this function. It drives both the prompt (via languageLabel()) and
+ * every translated error message this call can throw.
+ *
  * `onChunk` is optional and receives the full text so far, coalesced to
  * STREAM_FLUSH_MS; the finished text is also returned, so a caller can use
  * either or both. Moving from :generateContent to :streamGenerateContent
  * changes nothing about the request, the tokens or the cost — only when the
  * first characters become renderable. */
-async function summarizeVideo(videoId, apiKey, onChunk) {
+async function summarizeVideo(videoId, apiKey, lang, onChunk) {
   const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -294,7 +326,10 @@ async function summarizeVideo(videoId, apiKey, onChunk) {
       body: JSON.stringify({
         contents: [
           {
-            parts: [{ text: PROMPT }, { file_data: { file_uri: watchUrl } }],
+            parts: [
+              { text: buildPrompt(languageLabel(lang)) },
+              { file_data: { file_uri: watchUrl } },
+            ],
           },
         ],
         generationConfig: {
@@ -304,7 +339,7 @@ async function summarizeVideo(videoId, apiKey, onChunk) {
     });
   } catch (err) {
     settle();
-    throw connectionError(err, false);
+    throw connectionError(err, false, lang);
   }
 
   // A rejected request answers with an ordinary JSON error body, not a stream.
@@ -319,14 +354,14 @@ async function summarizeVideo(videoId, apiKey, onChunk) {
     usage = body && body.usageMetadata;
     settle();
 
-    const [title, detail] = describeApiError(res.status, body);
+    const [title, detail] = describeApiError(res.status, body, lang);
     throw new AppError(title, detail || raw.slice(0, 400));
   }
   if (!res.body) {
     settle();
     throw new AppError(
-      "Unreadable response",
-      "The API returned no readable body.",
+      t(lang, "unreadableResponseTitle"),
+      t(lang, "unreadableResponseDetail"),
     );
   }
 
@@ -347,7 +382,11 @@ async function summarizeVideo(videoId, apiKey, onChunk) {
     await readSseStream(res.body, (event) => {
       // Google can report a failure mid-stream, having already sent a 200.
       if (event.error) {
-        const [title, detail] = describeApiError(event.error.code || 500, event);
+        const [title, detail] = describeApiError(
+          event.error.code || 500,
+          event,
+          lang,
+        );
         throw new AppError(title, detail);
       }
 
@@ -374,23 +413,26 @@ async function summarizeVideo(videoId, apiKey, onChunk) {
   } catch (err) {
     settle();
     if (err instanceof AppError) throw err;
-    throw connectionError(err, Boolean(text));
+    throw connectionError(err, Boolean(text), lang);
   }
   settle();
 
   if (blockReason) {
     throw new AppError(
-      "Request blocked",
-      BLOCK_REASONS[blockReason] || `Blocked: ${blockReason}`,
+      t(lang, "requestBlockedTitle"),
+      blockReasonMessage(lang, blockReason) ||
+        t(lang, "blockedGeneric", { reason: blockReason }),
     );
   }
 
   text = text.trim();
   if (!text) {
     throw new AppError(
-      "No summary returned",
-      BLOCK_REASONS[finishReason] ||
-        `The model returned no text${finishReason ? ` (finishReason: ${finishReason})` : ""}.`,
+      t(lang, "noSummaryTitle"),
+      blockReasonMessage(lang, finishReason) ||
+        t(lang, "noSummaryGeneric", {
+          suffix: finishReason ? ` (finishReason: ${finishReason})` : "",
+        }),
     );
   }
 

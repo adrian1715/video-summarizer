@@ -1,9 +1,10 @@
 "use strict";
 
-/* The config, storage, Gemini and rendering helpers this file calls live in
- * shared/ — popup.html loads them first (see shared/api.js, shared/video.js,
- * shared/render.js). They're shared with the background worker and the
- * in-page menu item so there's one copy of the prompt and the API contract. */
+/* The config, storage, i18n, Gemini and rendering helpers this file calls
+ * live in shared/ — popup.html loads them first (see shared/api.js,
+ * shared/video.js, shared/render.js, shared/i18n.js). They're shared with the
+ * background worker and the in-page menu item so there's one copy of the
+ * prompt, the API contract and the string table. */
 
 /* ---------------------------------------------------------------------------
  * DOM
@@ -22,6 +23,7 @@ const el = {
   keyReveal: $("key-reveal"),
   keySave: $("key-save"),
   keyClear: $("key-clear"),
+  language: $("language-select"),
   cacheClear: $("cache-clear"),
   main: $("main"),
   videoTitle: $("video-title"),
@@ -57,7 +59,36 @@ const state = {
   entries: [], // history: [{ id, summary, timestamp, title, model }], newest first
   entryId: null,
   deleteArmed: false,
+  lang: "en", // resolved UI language code; set for real early in init()
+  noticeKey: null, // i18n key behind the current #notice text, if any (see setNotice)
+  cachedTimestamp: null, // timestamp behind the current cache-bar text, if shown
 };
+
+/* ---------------------------------------------------------------------------
+ * i18n
+ *
+ * tr() is the one call site everything else uses; state.lang is the only
+ * thing that changes when the user picks a language in settings. Static
+ * markup is translated by walking data-i18n* attributes (applyTranslations());
+ * text set dynamically from JS goes through tr() directly at the call site.
+ * ------------------------------------------------------------------------ */
+
+const tr = (key, vars) => t(state.lang, key, vars);
+
+function applyTranslations() {
+  document
+    .querySelectorAll("[data-i18n]")
+    .forEach((node) => (node.textContent = tr(node.dataset.i18n)));
+  document
+    .querySelectorAll("[data-i18n-placeholder]")
+    .forEach((node) => (node.placeholder = tr(node.dataset.i18nPlaceholder)));
+  document
+    .querySelectorAll("[data-i18n-title]")
+    .forEach((node) => (node.title = tr(node.dataset.i18nTitle)));
+  document
+    .querySelectorAll("[data-i18n-aria]")
+    .forEach((node) => node.setAttribute("aria-label", tr(node.dataset.i18nAria)));
+}
 
 /* ---------------------------------------------------------------------------
  * UI helpers
@@ -67,9 +98,13 @@ function show(node, visible) {
   node.classList.toggle("hidden", !visible);
 }
 
-function setNotice(text) {
-  el.notice.textContent = text || "";
-  show(el.notice, Boolean(text));
+// `key` is remembered so a later language change can retranslate whatever's
+// currently showing (see applyLanguageChange()) instead of freezing it in
+// whatever language was active when it was first set.
+function setNotice(key) {
+  state.noticeKey = key;
+  el.notice.textContent = key ? tr(key) : "";
+  show(el.notice, Boolean(key));
 }
 
 function showError(title, detail) {
@@ -94,12 +129,22 @@ function clearError() {
   show(el.error, false);
 }
 
+function renderSummarizeText() {
+  el.summarize.textContent = tr(state.busy ? "summarizing" : "summarize");
+}
+
+function renderVideoTitle() {
+  el.videoTitle.textContent = state.videoId
+    ? state.title || tr("youtubeVideoFallback")
+    : tr("noVideoTitle");
+}
+
 function setBusy(busy) {
   state.busy = busy;
   show(el.loading, busy);
   el.summarize.disabled = busy || !state.videoId;
   el.resummarize.disabled = busy;
-  el.summarize.textContent = busy ? "Summarizing…" : "Summarize";
+  renderSummarizeText();
 }
 
 function renderSummary(text) {
@@ -115,12 +160,12 @@ function renderSummary(text) {
  * Summarize button twice.
  * ------------------------------------------------------------------------ */
 
-const VIEW_TITLES = {
-  main: "YT Quick Summary",
-  settings: "Settings",
-  history: "History",
-  entry: "Summary",
-};
+// "main" keeps the brand name as its title, deliberately untranslated — it's
+// a product name, not a UI string.
+function viewTitleFor(view) {
+  if (view === "main") return "YT Quick Summary";
+  return tr({ settings: "settings", history: "history", entry: "summaryViewTitle" }[view]);
+}
 
 function setView(view) {
   state.view = view;
@@ -133,7 +178,7 @@ function setView(view) {
   // Back sits where the brand dot does, so only one of them shows at a time.
   show(el.back, view !== "main");
   show(el.brandDot, view === "main");
-  el.viewTitle.textContent = VIEW_TITLES[view];
+  el.viewTitle.textContent = viewTitleFor(view);
 
   if (view !== "settings") el.settingsStatus.textContent = "";
 }
@@ -141,6 +186,66 @@ function setView(view) {
 function goBack() {
   // The entry view is reached from the list; everything else from main.
   setView(state.view === "entry" ? "history" : "main");
+}
+
+/* ---------------------------------------------------------------------------
+ * Language
+ * ------------------------------------------------------------------------ */
+
+// "Auto" is a real option, not just the absence of one — its label names the
+// system language it resolves to, so picking it back after choosing an
+// explicit language isn't a leap of faith. Native-script labels (Español,
+// 日本語, …) come from LANGUAGES/languageNativeLabel in shared/i18n.js, so a
+// speaker of that language recognizes their own entry regardless of which
+// language the popup currently renders in.
+function populateLanguageOptions() {
+  el.language.replaceChildren();
+
+  const auto = document.createElement("option");
+  auto.value = "auto";
+  auto.textContent = tr("autoDetected", {
+    lang: languageNativeLabel(systemLanguageCode()),
+  });
+  el.language.append(auto);
+
+  for (const { code, native } of LANGUAGES) {
+    const opt = document.createElement("option");
+    opt.value = code;
+    opt.textContent = native;
+    el.language.append(opt);
+  }
+}
+
+// Everything that (a) was translated into markup ahead of time, or (b) is
+// live UI chrome derived from current state, gets redone in the new
+// language. What's deliberately left alone: text that resulted from a
+// completed action — an error already on screen, a "Key saved." status line
+// — stays as it was when that action finished, the same way a cached summary
+// keeps the language it was made in. Only the next action picks up the
+// change.
+async function applyLanguageChange(code) {
+  await chrome.storage.local.set({ language: code });
+  state.lang = await resolveLanguageCode();
+
+  populateLanguageOptions();
+  el.language.value = code;
+
+  applyTranslations();
+  el.viewTitle.textContent = viewTitleFor(state.view);
+  renderSummarizeText();
+  renderVideoTitle();
+  armDelete(state.deleteArmed);
+  if (state.noticeKey) setNotice(state.noticeKey);
+  if (state.cachedTimestamp && !el.cacheBar.classList.contains("hidden")) {
+    el.cacheWhen.textContent = tr("cachedRelative", {
+      time: relativeTime(state.cachedTimestamp, state.lang),
+    });
+  }
+  if (state.view === "history") renderHistoryList();
+  if (state.view === "entry" && state.entryId) openEntry(state.entryId);
+
+  el.settingsStatus.style.color = "var(--ok)";
+  el.settingsStatus.textContent = tr("languageSaved");
 }
 
 /* ---------------------------------------------------------------------------
@@ -181,13 +286,13 @@ function renderHistoryList() {
 
     const title = document.createElement("div");
     title.className = "history-title";
-    title.textContent = entry.title || "Untitled video";
+    title.textContent = entry.title || tr("untitledVideo");
     btn.append(title);
 
     const meta = document.createElement("div");
     meta.className = "history-meta";
     // Entries cached before a field existed still have to render.
-    meta.textContent = `${entry.timestamp ? relativeTime(entry.timestamp) : "unknown date"} · ${entry.id}`;
+    meta.textContent = `${entry.timestamp ? relativeTime(entry.timestamp, state.lang) : tr("unknownDate")} · ${entry.id}`;
     btn.append(meta);
 
     btn.addEventListener("click", () => openEntry(entry.id));
@@ -199,8 +304,8 @@ function renderHistoryList() {
   show(el.historySearch, state.entries.length > 0);
   show(el.historyEmpty, visible.length === 0);
   el.historyEmpty.textContent = state.entries.length
-    ? "Nothing matches that search."
-    : "No summaries yet. Summarize a video and it'll show up here.";
+    ? tr("noMatches")
+    : tr("noSummariesYet");
 }
 
 async function openHistory() {
@@ -212,7 +317,7 @@ async function openHistory() {
 
 function armDelete(armed) {
   state.deleteArmed = armed;
-  el.entryDelete.textContent = armed ? "Click again to delete" : "Delete";
+  el.entryDelete.textContent = tr(armed ? "deleteConfirm" : "delete");
 }
 
 function openEntry(id) {
@@ -222,8 +327,8 @@ function openEntry(id) {
   state.entryId = id;
   armDelete(false);
 
-  el.entryTitle.textContent = entry.title || "Untitled video";
-  el.entryMeta.textContent = `${entry.timestamp ? "Cached " + relativeTime(entry.timestamp) : "Cached at an unknown time"} · ${id}`;
+  el.entryTitle.textContent = entry.title || tr("untitledVideo");
+  el.entryMeta.textContent = `${entry.timestamp ? tr("cachedRelative", { time: relativeTime(entry.timestamp, state.lang) }) : tr("cachedUnknownTime")} · ${id}`;
   renderSummaryInto(el.entrySummary, entry.summary || "");
   el.entrySummary.scrollTop = 0;
 
@@ -261,7 +366,10 @@ async function deleteEntry() {
 
 async function displayCached(entry) {
   renderSummary(entry.summary);
-  el.cacheWhen.textContent = `Cached ${relativeTime(entry.timestamp)}`;
+  state.cachedTimestamp = entry.timestamp;
+  el.cacheWhen.textContent = tr("cachedRelative", {
+    time: relativeTime(entry.timestamp, state.lang),
+  });
   show(el.cacheBar, true);
   show(el.summarize, false);
 }
@@ -273,10 +381,10 @@ async function runSummarize() {
   if (!apiKey) {
     // The error stays on main for when they navigate back; settings gets its
     // own line, since it's the view they're about to be looking at.
-    showError("No API key set", "Add your Gemini API key in settings (gear icon, top right), then try again.");
+    showError(tr("noApiKeyTitle"), tr("noApiKeyDetailPopup"));
     setView("settings");
     el.settingsStatus.style.color = "var(--err-fg)";
-    el.settingsStatus.textContent = "Add your API key to summarize.";
+    el.settingsStatus.textContent = tr("addApiKeyToSummarize");
     el.apiKey.focus();
     return;
   }
@@ -291,7 +399,7 @@ async function runSummarize() {
      * arrive, and the article re-renders in place as more lands. state.busy
      * stays true throughout, so the buttons remain disabled until it's done. */
     let streaming = false;
-    const text = await summarizeVideo(state.videoId, apiKey, (partial) => {
+    const text = await summarizeVideo(state.videoId, apiKey, state.lang, (partial) => {
       if (!streaming) {
         streaming = true;
         show(el.loading, false);
@@ -309,7 +417,7 @@ async function runSummarize() {
     if (err instanceof AppError) {
       showError(err.title, err.detail);
     } else {
-      showError("Unexpected error", err && err.message ? err.message : String(err));
+      showError(tr("unexpectedError"), err && err.message ? err.message : String(err));
     }
     // Leave the button available so it doubles as retry.
     show(el.summarize, true);
@@ -321,6 +429,12 @@ async function runSummarize() {
  * ------------------------------------------------------------------------ */
 
 async function init() {
+  // Resolved before anything renders, so the very first paint — including the
+  // markup's own baked-in English text via applyTranslations() — is already
+  // in the right language.
+  state.lang = await resolveLanguageCode();
+  applyTranslations();
+
   // The markup starts on main; say so explicitly so state.view can't drift.
   setView("main");
 
@@ -346,19 +460,19 @@ async function init() {
   el.keyReveal.addEventListener("click", () => {
     const hidden = el.apiKey.type === "password";
     el.apiKey.type = hidden ? "text" : "password";
-    el.keyReveal.textContent = hidden ? "Hide" : "Show";
+    el.keyReveal.textContent = tr(hidden ? "hide" : "show");
   });
 
   el.keySave.addEventListener("click", async () => {
     const key = el.apiKey.value.trim();
     if (!key) {
       el.settingsStatus.style.color = "var(--err-fg)";
-      el.settingsStatus.textContent = "Enter a key first.";
+      el.settingsStatus.textContent = tr("enterKeyFirst");
       return;
     }
     await chrome.storage.local.set({ apiKey: key });
     el.settingsStatus.style.color = "var(--ok)";
-    el.settingsStatus.textContent = "Key saved.";
+    el.settingsStatus.textContent = tr("keySaved");
     clearError();
   });
 
@@ -366,14 +480,19 @@ async function init() {
     await chrome.storage.local.remove("apiKey");
     el.apiKey.value = "";
     el.settingsStatus.style.color = "var(--muted)";
-    el.settingsStatus.textContent = "Key cleared.";
+    el.settingsStatus.textContent = tr("keyCleared");
   });
+
+  populateLanguageOptions();
+  el.language.value = await getLanguagePref();
+  el.language.addEventListener("change", () => applyLanguageChange(el.language.value));
 
   el.cacheClear.addEventListener("click", async () => {
     await chrome.storage.local.remove("summaries");
     state.entries = [];
+    state.cachedTimestamp = null;
     el.settingsStatus.style.color = "var(--muted)";
-    el.settingsStatus.textContent = "Cached summaries cleared.";
+    el.settingsStatus.textContent = tr("cacheCleared");
     show(el.summary, false);
     show(el.cacheBar, false);
     show(el.summarize, true);
@@ -400,22 +519,21 @@ async function init() {
   state.url = (tab && tab.url) || "";
   state.videoId = extractVideoId(state.url);
   state.title = cleanTitle(tab && tab.title);
+  renderVideoTitle();
 
   if (!state.videoId) {
-    el.videoTitle.textContent = "No YouTube video here";
     el.videoId.textContent = "";
-    setNotice("Open a YouTube video (youtube.com/watch, /shorts or youtu.be) and click the icon again.");
+    setNotice("noVideoNotice");
     el.summarize.disabled = true;
     if (!savedKey) setView("settings");
     return;
   }
 
-  el.videoTitle.textContent = state.title || "YouTube video";
   el.videoId.textContent = state.videoId;
   el.summarize.disabled = false;
 
   if (!savedKey) {
-    setNotice("Add your Gemini API key to get started.");
+    setNotice("addApiKeyNotice");
     setView("settings");
   }
 
@@ -425,5 +543,5 @@ async function init() {
 }
 
 init().catch((err) => {
-  showError("Failed to start", err && err.message ? err.message : String(err));
+  showError(tr("failedToStart"), err && err.message ? err.message : String(err));
 });

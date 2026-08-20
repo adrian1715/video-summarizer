@@ -80,6 +80,28 @@ const POPUP_HOSTS = [
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
+/* ---------------------------------------------------------------------------
+ * UI language
+ *
+ * Resolved once at load and cached in a plain variable, so the synchronous
+ * DOM-building code below (injectMenuItem, buildModal) doesn't need to become
+ * async just to read a language code — by the time a user opens a menu or the
+ * modal, this has long since settled. Kept fresh if the language is changed
+ * in the popup's settings while this tab stays open. shared/i18n.js has no
+ * secrets, unlike shared/api.js, so it's safe to load into this page's world
+ * (see manifest.json and the "Deliberate omissions" note in CLAUDE.md).
+ * ------------------------------------------------------------------------ */
+
+let uiLang = "en";
+resolveLanguageCode().then((lang) => (uiLang = lang));
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes.language) {
+    resolveLanguageCode().then((lang) => (uiLang = lang));
+  }
+});
+
+const tr = (key, vars) => t(uiLang, key, vars);
+
 /* Diagnostics. Append #ytqs-debug to the YouTube URL to get a running account
  * of what the menu detection sees — YouTube's DOM is the thing most likely to
  * have moved, and this is the only way to find out where. */
@@ -226,7 +248,7 @@ function injectMenuItem(list, video) {
     // role="option": the row sits inside YouTube's own listbox.
     { class: ITEM_CLASS, role: "option", tabindex: "0" },
     h("span", { class: "ytqs-menu-icon" }, icon(LIST_ICON, 24)),
-    h("span", { class: "ytqs-menu-label", text: "Summarize" }),
+    h("span", { class: "ytqs-menu-label", text: tr("summarize") }),
   );
 
   item.dataset.videoId = video.videoId;
@@ -676,7 +698,7 @@ function buildModal() {
   const titleNode = h("div", { class: "title", id: "ytqs-title" });
   const close = h(
     "button",
-    { class: "close", type: "button", "aria-label": "Close" },
+    { class: "close", type: "button", "aria-label": tr("closeModal") },
     icon(CLOSE_ICON, 18),
   );
 
@@ -687,10 +709,10 @@ function buildModal() {
     h(
       "div",
       {},
-      h("div", { class: "loading-title", text: "Watching the video…" }),
+      h("div", { class: "loading-title", text: tr("watchingVideo") }),
       h("div", {
         class: "loading-sub",
-        text: "Gemini processes the full video, so this can take a while.",
+        text: tr("watchingVideoSub"),
       }),
     ),
   );
@@ -701,7 +723,7 @@ function buildModal() {
   const again = h("button", {
     class: "link-btn hidden",
     type: "button",
-    text: "Re-summarize",
+    text: tr("resummarize"),
   });
 
   const dialog = h(
@@ -776,7 +798,7 @@ function showError(title, detail) {
 function openModal(videoId, title) {
   ensureModal();
   modal.videoId = videoId;
-  modal.videoTitle = title || "YouTube video";
+  modal.videoTitle = title || tr("youtubeVideoFallback");
   modal.returnFocus = document.activeElement;
 
   modal.titleNode.textContent = modal.videoTitle;
@@ -845,16 +867,16 @@ async function load(videoId, title, force) {
   if (!res.ok) {
     showError(res.error.title, res.error.detail);
     show(modal.again, true);
-    modal.again.textContent = "Try again";
+    modal.again.textContent = tr("tryAgain");
     return;
   }
 
   renderSummaryInto(modal.summary, res.entry.summary);
   show(modal.summary, true);
   modal.meta.textContent = res.cached
-    ? `Cached ${relativeTime(res.entry.timestamp)}`
-    : "Summarized just now";
-  modal.again.textContent = "Re-summarize";
+    ? tr("cachedRelative", { time: relativeTime(res.entry.timestamp, uiLang) })
+    : tr("summarizedJustNow");
+  modal.again.textContent = tr("resummarize");
   show(modal.again, true);
 }
 
@@ -910,9 +932,8 @@ function requestSummary(videoId, title, force, onChunk) {
     const disconnected = {
       ok: false,
       error: {
-        title: "Extension unavailable",
-        detail:
-          "The extension was reloaded or updated. Refresh this page and try again.",
+        title: tr("extensionUnavailable"),
+        detail: tr("extensionUnavailableDetail"),
       },
     };
 

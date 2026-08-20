@@ -144,14 +144,18 @@ function renderSummaryInto(target, text) {
   });
 }
 
-function relativeTime(ts) {
+// `lang` is a resolved language code (shared/i18n.js's resolveLanguageCode());
+// callers already have it, so it's taken rather than re-resolved here. Beyond
+// 30 days this falls back to toLocaleDateString(lang), which is a real i18n
+// date format on its own — no string table entry needed for that branch.
+function relativeTime(ts, lang) {
   const secs = Math.max(0, Math.round((Date.now() - ts) / 1000));
-  if (secs < 60) return "just now";
+  if (secs < 60) return t(lang, "justNow");
   const mins = Math.round(secs / 60);
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 60) return t(lang, "minutesAgo", { n: mins });
   const hours = Math.round(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t(lang, "hoursAgo", { n: hours });
   const days = Math.round(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(ts).toLocaleDateString();
+  if (days < 30) return t(lang, "daysAgo", { n: days });
+  return new Date(ts).toLocaleDateString(lang);
 }

@@ -8,7 +8,7 @@
   <body>
     <header class="bar">
       <div class="brand">
-        <button id="back" class="icon-btn hidden" title="Back" aria-label="Back">
+        <button id="back" class="icon-btn hidden" data-i18n-title="back" data-i18n-aria="back" title="Back" aria-label="Back">
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
             <path fill="currentColor" d="M15.4 7.4 14 6l-6 6 6 6 1.4-1.4L10.8 12z" />
           </svg>
@@ -16,7 +16,7 @@
         <span id="brand-dot" class="dot"></span>
         <span id="view-title">YT Quick Summary</span>
       </div>
-      <button id="settings-toggle" class="icon-btn" title="Settings" aria-label="Settings">
+      <button id="settings-toggle" class="icon-btn" data-i18n-title="settings" data-i18n-aria="settings" title="Settings" aria-label="Settings">
         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
           <path
             fill="currentColor"
@@ -26,53 +26,59 @@
       </button>
     </header>
 
-    <!-- Settings. Only the key and the cache live here — the current video and
-         its Summarize button belong to the main view, not to both. -->
+    <!-- Settings. Only the key, language and the cache live here — the current
+         video and its Summarize button belong to the main view, not to both. -->
     <section id="settings" class="panel hidden">
-      <label class="label" for="api-key">Gemini API key</label>
+      <label class="label" for="api-key" data-i18n="apiKeyLabel">Gemini API key</label>
       <div class="key-row">
         <input id="api-key" type="password" placeholder="AIza…" spellcheck="false" autocomplete="off" />
-        <button id="key-reveal" class="ghost-btn" type="button">Show</button>
+        <button id="key-reveal" class="ghost-btn" type="button" data-i18n="show">Show</button>
       </div>
       <p class="hint">
-        Stored locally in this browser and sent only to Google's API. Get one at
+        <span data-i18n="apiKeyHint">Stored locally in this browser and sent only to Google's API. Get one at</span>
         <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">aistudio.google.com/apikey</a>.
       </p>
       <div class="row">
-        <button id="key-save" class="primary-btn">Save key</button>
-        <button id="key-clear" class="ghost-btn">Clear</button>
+        <button id="key-save" class="primary-btn" data-i18n="saveKey">Save key</button>
+        <button id="key-clear" class="ghost-btn" data-i18n="clear">Clear</button>
       </div>
       <p id="settings-status" class="status" role="status"></p>
       <hr />
+      <label class="label" for="language-select" data-i18n="summaryLanguage">Language</label>
+      <select id="language-select"></select>
+      <p class="hint" data-i18n="languageHint">
+        Applies to new summaries. Cached ones keep the language they were made in.
+      </p>
+      <hr />
       <div class="stack">
-        <button id="history-open-settings" class="ghost-btn wide">View history</button>
-        <button id="cache-clear" class="ghost-btn wide">Clear cached summaries</button>
+        <button id="history-open-settings" class="ghost-btn wide" data-i18n="viewHistory">View history</button>
+        <button id="cache-clear" class="ghost-btn wide" data-i18n="clearCachedSummaries">Clear cached summaries</button>
       </div>
     </section>
 
     <!-- Main: the current tab's video -->
     <main id="main" class="view">
       <div id="video-box" class="video-box">
-        <div id="video-title" class="video-title">Checking current tab…</div>
+        <div id="video-title" class="video-title" data-i18n="checkingTab">Checking current tab…</div>
         <div id="video-id" class="video-id"></div>
       </div>
 
       <div id="notice" class="notice hidden" role="status"></div>
 
-      <button id="summarize" class="primary-btn wide" disabled>Summarize</button>
+      <button id="summarize" class="primary-btn wide" disabled data-i18n="summarize">Summarize</button>
 
       <div id="cache-bar" class="cache-bar hidden">
         <span id="cache-when"></span>
-        <button id="resummarize" class="link-btn">Re-summarize</button>
+        <button id="resummarize" class="link-btn" data-i18n="resummarize">Re-summarize</button>
       </div>
 
-      <button id="history-open" class="ghost-btn wide spaced">View history</button>
+      <button id="history-open" class="ghost-btn wide spaced" data-i18n="viewHistory">View history</button>
 
       <div id="loading" class="loading hidden">
         <div class="spinner"></div>
         <div>
-          <div class="loading-title">Watching the video…</div>
-          <div class="loading-sub">Gemini processes the full video, so this can take a while.</div>
+          <div class="loading-title" data-i18n="watchingVideo">Watching the video…</div>
+          <div class="loading-sub" data-i18n="watchingVideoSub">Gemini processes the full video, so this can take a while.</div>
         </div>
       </div>
 
@@ -87,6 +93,7 @@
         id="history-search"
         class="search hidden"
         type="text"
+        data-i18n-placeholder="searchPlaceholder"
         placeholder="Search titles and summaries…"
         spellcheck="false"
         autocomplete="off"
@@ -102,13 +109,14 @@
         <div id="entry-meta" class="video-id"></div>
       </div>
       <div class="entry-actions">
-        <button id="entry-open" class="link-btn">Open on YouTube</button>
-        <button id="entry-delete" class="link-btn danger">Delete</button>
+        <button id="entry-open" class="link-btn" data-i18n="openOnYoutube">Open on YouTube</button>
+        <button id="entry-delete" class="link-btn danger" data-i18n="delete">Delete</button>
       </div>
       <article id="entry-summary" class="summary"></article>
     </section>
 
     <script src="shared/video.js"></script>
+    <script src="shared/i18n.js"></script>
     <script src="shared/render.js"></script>
     <script src="shared/api.js"></script>
     <script src="popup.js"></script>

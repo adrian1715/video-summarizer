@@ -17,7 +17,7 @@
  * the popup closes, which remains an accepted tradeoff there.
  * ------------------------------------------------------------------------ */
 
-importScripts("shared/video.js", "shared/api.js");
+importScripts("shared/video.js", "shared/i18n.js", "shared/api.js");
 
 // Must match PORT_NAME in content.js — the two can't share a constant, since
 // shared/api.js is deliberately never loaded into the page's world.
@@ -49,9 +49,17 @@ chrome.runtime.onConnect.addListener((port) => {
   port.onMessage.addListener((msg) => {
     if (!msg || msg.type !== "summarize") return;
 
-    handleSummarize(msg, send)
-      .catch((err) =>
-        fail("Unexpected error", err && err.message ? err.message : String(err)),
+    // Resolved once per request, same as apiKey — everything this request can
+    // fail with, in-page, comes back in this language.
+    resolveLanguageCode()
+      .catch(() => "en")
+      .then((lang) =>
+        handleSummarize(msg, send, lang).catch((err) =>
+          fail(
+            t(lang, "unexpectedError"),
+            err && err.message ? err.message : String(err),
+          ),
+        ),
       )
       .then((result) => send({ type: "done", result }));
   });
@@ -59,11 +67,11 @@ chrome.runtime.onConnect.addListener((port) => {
 
 const fail = (title, detail) => ({ ok: false, error: { title, detail } });
 
-async function handleSummarize({ videoId, title, force }, send) {
+async function handleSummarize({ videoId, title, force }, send, lang) {
   if (!isVideoId(videoId)) {
     return fail(
-      "Not a YouTube video",
-      "Couldn't work out which video that menu belongs to.",
+      t(lang, "notAYoutubeVideo"),
+      t(lang, "notAYoutubeVideoDetail"),
     );
   }
 
@@ -76,10 +84,7 @@ async function handleSummarize({ videoId, title, force }, send) {
 
   const apiKey = await getApiKey();
   if (!apiKey) {
-    return fail(
-      "No API key set",
-      "Click the YT Quick Summary toolbar icon, open settings (gear icon) and add your Gemini API key.",
-    );
+    return fail(t(lang, "noApiKeyTitle"), t(lang, "noApiKeyDetailInPage"));
   }
 
   let run = inFlight.get(videoId);
@@ -87,7 +92,7 @@ async function handleSummarize({ videoId, title, force }, send) {
     // Joining a run already under way — catch up on what it has so far.
     if (run.text) send({ type: "chunk", text: run.text });
   } else {
-    run = startRun(videoId, title, apiKey);
+    run = startRun(videoId, title, apiKey, lang);
   }
 
   const listener = (text) => send({ type: "chunk", text });
@@ -99,20 +104,20 @@ async function handleSummarize({ videoId, title, force }, send) {
   }
 }
 
-function startRun(videoId, title, apiKey) {
+function startRun(videoId, title, apiKey, lang) {
   const run = { text: "", listeners: new Set(), promise: null };
 
-  run.promise = runSummarize(videoId, title, apiKey, run).finally(() =>
+  run.promise = runSummarize(videoId, title, apiKey, lang, run).finally(() =>
     inFlight.delete(videoId),
   );
   inFlight.set(videoId, run);
   return run;
 }
 
-async function runSummarize(videoId, title, apiKey, run) {
+async function runSummarize(videoId, title, apiKey, lang, run) {
   const stopKeepAlive = keepAlive();
   try {
-    const summary = await summarizeVideo(videoId, apiKey, (text) => {
+    const summary = await summarizeVideo(videoId, apiKey, lang, (text) => {
       run.text = text;
       for (const listener of run.listeners) listener(text);
     });
@@ -128,7 +133,7 @@ async function runSummarize(videoId, title, apiKey, run) {
   } catch (err) {
     if (err instanceof AppError) return fail(err.title, err.detail);
     return fail(
-      "Unexpected error",
+      t(lang, "unexpectedError"),
       err && err.message ? err.message : String(err),
     );
   } finally {

@@ -1,7 +1,7 @@
 # YT Quick Summary
 
 A Chrome extension that summarizes any public YouTube video with Google's Gemini
-API — a TL;DR plus 5–8 key points, usually in well under a minute of reading.
+API — a TL;DR plus 5–7 key points, usually in well under a minute of reading.
 
 It uses **your own** Gemini API key (BYOK). There is no server, no account, no
 sign-up, and nothing is sent anywhere except Google's API.
@@ -19,19 +19,25 @@ Every summary is cached, so opening the same video again is instant and free.
 
 ## Table of contents
 
-- [Requirements](#requirements)
-- [Install](#install)
-- [Get your Gemini API key](#get-your-gemini-api-key)
-- [Add the key to the extension](#add-the-key-to-the-extension)
-- [How to use it](#how-to-use-it)
-- [History and cached summaries](#history-and-cached-summaries)
-- [What it costs](#what-it-costs)
-- [Privacy](#privacy)
-- [Troubleshooting](#troubleshooting)
-- [Which videos work](#which-videos-work)
-- [Updating](#updating)
-- [Uninstalling](#uninstalling)
-- [For developers](#for-developers)
+- [YT Quick Summary](#yt-quick-summary)
+  - [Table of contents](#table-of-contents)
+  - [Requirements](#requirements)
+  - [Install](#install)
+  - [Get your Gemini API key](#get-your-gemini-api-key)
+  - [Add the key to the extension](#add-the-key-to-the-extension)
+  - [How to use it](#how-to-use-it)
+    - [Option A — the toolbar popup (summarize what you're watching)](#option-a--the-toolbar-popup-summarize-what-youre-watching)
+    - [Option B — the three-dot menu (summarize without leaving the page)](#option-b--the-three-dot-menu-summarize-without-leaving-the-page)
+    - [What a summary looks like](#what-a-summary-looks-like)
+  - [History and cached summaries](#history-and-cached-summaries)
+  - [What it costs](#what-it-costs)
+  - [Privacy](#privacy)
+  - [Troubleshooting](#troubleshooting)
+  - [Which videos work](#which-videos-work)
+  - [Updating](#updating)
+  - [Uninstalling](#uninstalling)
+  - [For developers](#for-developers)
+  - [License](#license)
 
 ---
 
@@ -112,7 +118,7 @@ browser at any time.
 3. Click **Summarize**.
 
 The popup shows a spinner while Gemini watches the video, then renders the
-summary. Gemini processes the *whole* video, so a long one can take a while —
+summary. Gemini processes the _whole_ video, so a long one can take a while —
 the request gives up after 3 minutes.
 
 > **Keep the popup open while it works.** Chrome closes the popup the moment you
@@ -208,18 +214,18 @@ nothing.
 
 ## Troubleshooting
 
-| What you see | What's wrong | Fix |
-| --- | --- | --- |
-| **"No API key set"** | No key saved yet | Toolbar icon → gear → paste key → **Save key** |
-| **"Invalid API key"** | Key is wrong or was revoked | Create a fresh key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) and save it again |
-| **"API key rejected"** / **"API not enabled for this key"** | Key isn't a Gemini API key, or the API isn't enabled on that Google Cloud project | Make a key from **Google AI Studio**, not from a random Cloud console project |
-| **"Gemini couldn't read this video"** | The video isn't publicly accessible | See [Which videos work](#which-videos-work) |
-| **"Rate limit or quota exceeded"** | Past the free tier's 8 hours of video per day | Wait, or check quota in AI Studio |
-| **"Timed out"** | No response in 3 minutes | Very long videos can exceed this — retry, or try a shorter one |
-| **"Model not found"** | Google renamed or retired the model | Update the extension; if you're comfortable editing code, change `MODEL` in `shared/api.js` |
-| **"No YouTube video here"** | The active tab isn't a video page | Open a `watch`, `shorts` or `youtu.be` URL and click the icon again |
-| **The ⋮ menu has no "Summarize" row** | The YouTube tab predates the extension load | **Refresh the YouTube tab.** If it's still missing, reload the extension at `chrome://extensions`, then refresh the tab |
-| **"Network error"** | No connection, or something blocking the request | Check your connection, VPN, or corporate proxy |
+| What you see                                                | What's wrong                                                                      | Fix                                                                                                                     |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **"No API key set"**                                        | No key saved yet                                                                  | Toolbar icon → gear → paste key → **Save key**                                                                          |
+| **"Invalid API key"**                                       | Key is wrong or was revoked                                                       | Create a fresh key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) and save it again                |
+| **"API key rejected"** / **"API not enabled for this key"** | Key isn't a Gemini API key, or the API isn't enabled on that Google Cloud project | Make a key from **Google AI Studio**, not from a random Cloud console project                                           |
+| **"Gemini couldn't read this video"**                       | The video isn't publicly accessible                                               | See [Which videos work](#which-videos-work)                                                                             |
+| **"Rate limit or quota exceeded"**                          | Past the free tier's 8 hours of video per day                                     | Wait, or check quota in AI Studio                                                                                       |
+| **"Timed out"**                                             | No response in 3 minutes                                                          | Very long videos can exceed this — retry, or try a shorter one                                                          |
+| **"Model not found"**                                       | Google renamed or retired the model                                               | Update the extension; if you're comfortable editing code, change `MODEL` in `shared/api.js`                             |
+| **"No YouTube video here"**                                 | The active tab isn't a video page                                                 | Open a `watch`, `shorts` or `youtu.be` URL and click the icon again                                                     |
+| **The ⋮ menu has no "Summarize" row**                       | The YouTube tab predates the extension load                                       | **Refresh the YouTube tab.** If it's still missing, reload the extension at `chrome://extensions`, then refresh the tab |
+| **"Network error"**                                         | No connection, or something blocking the request                                  | Check your connection, VPN, or corporate proxy                                                                          |
 
 Everything the extension shows also includes Google's own error message
 underneath, which is usually the fastest clue.
