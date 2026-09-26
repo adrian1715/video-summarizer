@@ -146,7 +146,7 @@ const STRINGS = {
     noApiKeyDetailPopup:
       "Add your Gemini API key in settings (gear icon, top right), then try again.",
     noApiKeyDetailInPage:
-      "Click the YT Quick Summary toolbar icon, open settings (gear icon) and add your Gemini API key.",
+      "Click the YouTube Quick Summary toolbar icon, open settings (gear icon) and add your Gemini API key.",
     summarize: "Summarize",
     summarizing: "Summarizing…",
     cachedRelative: "Cached {time}",
@@ -269,7 +269,7 @@ const STRINGS = {
     noApiKeyDetailPopup:
       "Añade tu clave de API de Gemini en ajustes (icono de engranaje, arriba a la derecha) y vuelve a intentarlo.",
     noApiKeyDetailInPage:
-      "Haz clic en el icono de YT Quick Summary en la barra de herramientas, abre ajustes (icono de engranaje) y añade tu clave de API de Gemini.",
+      "Haz clic en el icono de YouTube Quick Summary en la barra de herramientas, abre ajustes (icono de engranaje) y añade tu clave de API de Gemini.",
     summarize: "Resumir",
     summarizing: "Resumiendo…",
     cachedRelative: "En caché {time}",
@@ -382,7 +382,7 @@ const STRINGS = {
     noApiKeyDetailPopup:
       "Ajoutez votre clé API Gemini dans les paramètres (icône d'engrenage, en haut à droite), puis réessayez.",
     noApiKeyDetailInPage:
-      "Cliquez sur l'icône YT Quick Summary de la barre d'outils, ouvrez les paramètres (icône d'engrenage) et ajoutez votre clé API Gemini.",
+      "Cliquez sur l'icône YouTube Quick Summary de la barre d'outils, ouvrez les paramètres (icône d'engrenage) et ajoutez votre clé API Gemini.",
     summarize: "Résumer",
     summarizing: "Résumé en cours…",
     cachedRelative: "En cache {time}",
@@ -616,7 +616,7 @@ const STRINGS = {
     noApiKeyDetailPopup:
       "Aggiungi la tua chiave API Gemini nelle impostazioni (icona a forma di ingranaggio, in alto a destra), poi riprova.",
     noApiKeyDetailInPage:
-      "Fai clic sull'icona di YT Quick Summary nella barra degli strumenti, apri le impostazioni (icona a forma di ingranaggio) e aggiungi la tua chiave API Gemini.",
+      "Fai clic sull'icona di YouTube Quick Summary nella barra degli strumenti, apri le impostazioni (icona a forma di ingranaggio) e aggiungi la tua chiave API Gemini.",
     summarize: "Riassumi",
     summarizing: "Riassumendo…",
     cachedRelative: "In cache {time}",
@@ -733,7 +733,7 @@ const STRINGS = {
     noApiKeyDetailPopup:
       "Adicione sua chave de API do Gemini nas configurações (ícone de engrenagem, no canto superior direito) e tente novamente.",
     noApiKeyDetailInPage:
-      "Clique no ícone do YT Quick Summary na barra de ferramentas, abra as configurações (ícone de engrenagem) e adicione sua chave de API do Gemini.",
+      "Clique no ícone do YouTube Quick Summary na barra de ferramentas, abra as configurações (ícone de engrenagem) e adicione sua chave de API do Gemini.",
     summarize: "Resumir",
     summarizing: "Resumindo…",
     cachedRelative: "Em cache {time}",
@@ -848,7 +848,7 @@ const STRINGS = {
     noApiKeyDetailPopup:
       "Voeg je Gemini API-sleutel toe in instellingen (tandwielpictogram, rechtsboven) en probeer het opnieuw.",
     noApiKeyDetailInPage:
-      "Klik op het YT Quick Summary-pictogram in de werkbalk, open instellingen (tandwielpictogram) en voeg je Gemini API-sleutel toe.",
+      "Klik op het YouTube Quick Summary-pictogram in de werkbalk, open instellingen (tandwielpictogram) en voeg je Gemini API-sleutel toe.",
     summarize: "Samenvatten",
     summarizing: "Bezig met samenvatten…",
     cachedRelative: "Gecachet {time}",
@@ -961,7 +961,7 @@ const STRINGS = {
     noApiKeyDetailPopup:
       "Добавьте API-ключ Gemini в настройках (значок шестерёнки вверху справа) и попробуйте снова.",
     noApiKeyDetailInPage:
-      "Нажмите на значок YT Quick Summary на панели инструментов, откройте настройки (значок шестерёнки) и добавьте API-ключ Gemini.",
+      "Нажмите на значок YouTube Quick Summary на панели инструментов, откройте настройки (значок шестерёнки) и добавьте API-ключ Gemini.",
     summarize: "Создать сводку",
     summarizing: "Создание сводки…",
     cachedRelative: "В кэше {time}",
@@ -1073,7 +1073,7 @@ const STRINGS = {
     noApiKeyDetailPopup:
       "أضف مفتاح واجهة برمجة Gemini في الإعدادات (أيقونة الترس، أعلى اليمين)، ثم حاول مرة أخرى.",
     noApiKeyDetailInPage:
-      "انقر على أيقونة YT Quick Summary في شريط الأدوات، وافتح الإعدادات (أيقونة الترس) وأضف مفتاح واجهة برمجة Gemini.",
+      "انقر على أيقونة YouTube Quick Summary في شريط الأدوات، وافتح الإعدادات (أيقونة الترس) وأضف مفتاح واجهة برمجة Gemini.",
     summarize: "تلخيص",
     summarizing: "جارٍ التلخيص…",
     cachedRelative: "تم التخزين المؤقت {time}",
@@ -1183,7 +1183,7 @@ const STRINGS = {
     noApiKeyDetailPopup:
       "सेटिंग्स में (ऊपर दाईं ओर गियर आइकन) अपनी Gemini API कुंजी जोड़ें, फिर पुनः प्रयास करें।",
     noApiKeyDetailInPage:
-      "टूलबार में YT Quick Summary आइकन पर क्लिक करें, सेटिंग्स (गियर आइकन) खोलें और अपनी Gemini API कुंजी जोड़ें।",
+      "टूलबार में YouTube Quick Summary आइकन पर क्लिक करें, सेटिंग्स (गियर आइकन) खोलें और अपनी Gemini API कुंजी जोड़ें।",
     summarize: "सारांश बनाएं",
     summarizing: "सारांश बनाया जा रहा है…",
     cachedRelative: "कैश किया गया {time}",
@@ -1297,7 +1297,7 @@ const STRINGS = {
     noApiKeyDetailPopup:
       "設定（右上の歯車アイコン）でGemini APIキーを追加し、もう一度お試しください。",
     noApiKeyDetailInPage:
-      "ツールバーのYT Quick Summaryアイコンをクリックし、設定（歯車アイコン）を開いてGemini APIキーを追加してください。",
+      "ツールバーのYouTube Quick Summaryアイコンをクリックし、設定（歯車アイコン）を開いてGemini APIキーを追加してください。",
     summarize: "要約する",
     summarizing: "要約中…",
     cachedRelative: "{time}にキャッシュ済み",
@@ -1408,7 +1408,7 @@ const STRINGS = {
     noApiKeyDetailPopup:
       "설정(오른쪽 상단 톱니바퀴 아이콘)에서 Gemini API 키를 추가한 후 다시 시도하세요.",
     noApiKeyDetailInPage:
-      "툴바의 YT Quick Summary 아이콘을 클릭하고 설정(톱니바퀴 아이콘)을 연 다음 Gemini API 키를 추가하세요.",
+      "툴바의 YouTube Quick Summary 아이콘을 클릭하고 설정(톱니바퀴 아이콘)을 연 다음 Gemini API 키를 추가하세요.",
     summarize: "요약",
     summarizing: "요약 중…",
     cachedRelative: "{time} 캐시됨",
@@ -1516,7 +1516,7 @@ const STRINGS = {
     noApiKeyDetailPopup:
       "在设置中（右上角齿轮图标）添加你的 Gemini API 密钥，然后重试。",
     noApiKeyDetailInPage:
-      "点击工具栏中的 YT Quick Summary 图标，打开设置（齿轮图标），添加你的 Gemini API 密钥。",
+      "点击工具栏中的 YouTube Quick Summary 图标，打开设置（齿轮图标），添加你的 Gemini API 密钥。",
     summarize: "生成摘要",
     summarizing: "正在生成摘要…",
     cachedRelative: "已缓存于{time}",

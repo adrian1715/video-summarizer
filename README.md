@@ -1,4 +1,4 @@
-# YT Quick Summary
+# YouTube Quick Summary
 
 A Chrome extension that summarizes any public YouTube video with Google's Gemini
 API — a TL;DR plus 5–7 key points, usually in well under a minute of reading.
@@ -19,7 +19,7 @@ Every summary is cached, so opening the same video again is instant and free.
 
 ## Table of contents
 
-- [YT Quick Summary](#yt-quick-summary)
+- [YouTube Quick Summary](#youtube-quick-summary)
   - [Table of contents](#table-of-contents)
   - [Requirements](#requirements)
   - [Install](#install)
@@ -77,7 +77,7 @@ The extension isn't on the Chrome Web Store; you load it from this folder.
    containing `manifest.json`).
 
 5. **Pin it.** Click the puzzle-piece icon in the toolbar, then the pin next to
-   **YT Quick Summary** so the icon stays visible.
+   **YouTube Quick Summary** so the icon stays visible.
 
 Chrome will warn that the extension can "read and change your data on
 youtube.com". That permission is what lets it add the **Summarize** row to
@@ -98,7 +98,7 @@ who has it can spend against your quota.
 
 ## Add the key to the extension
 
-1. Click the **YT Quick Summary** icon in the toolbar.
+1. Click the **YouTube Quick Summary** icon in the toolbar.
 2. Click the **⚙️ gear** in the top-right of the popup.
    (If you haven't set a key yet, the popup opens straight to this screen.)
 3. Paste your key into the **Gemini API key** field.
@@ -114,7 +114,7 @@ browser at any time.
 ### Option A — the toolbar popup (summarize what you're watching)
 
 1. Open a YouTube video — `youtube.com/watch…`, a Short, or a `youtu.be` link.
-2. Click the **YT Quick Summary** icon.
+2. Click the **YouTube Quick Summary** icon.
 3. Click **Summarize**.
 
 The popup shows a spinner while Gemini watches the video, then renders the
@@ -257,7 +257,7 @@ git pull
 ```
 
 Then go to `chrome://extensions` and click the **reload** icon (↻) on the
-YT Quick Summary card. Finally, **refresh any open YouTube tabs**.
+YouTube Quick Summary card. Finally, **refresh any open YouTube tabs**.
 
 Your saved key and cached summaries survive updates.
 

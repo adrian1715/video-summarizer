@@ -1,8 +1,8 @@
-# Privacy Policy — YT Quick Summary
+# Privacy Policy — YouTube Quick Summary
 
 *Last updated: August 2026*
 
-YT Quick Summary is a Chrome extension that summarizes YouTube videos using Google's Gemini API and the user's own API key. This policy explains what data the extension handles.
+YouTube Quick Summary is a Chrome extension that summarizes YouTube videos using Google's Gemini API and the user's own API key. This policy explains what data the extension handles.
 
 ## What data is collected
 

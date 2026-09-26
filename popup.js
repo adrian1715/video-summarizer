@@ -163,7 +163,7 @@ function renderSummary(text) {
 // "main" keeps the brand name as its title, deliberately untranslated — it's
 // a product name, not a UI string.
 function viewTitleFor(view) {
-  if (view === "main") return "YT Quick Summary";
+  if (view === "main") return "YouTube Quick Summary";
   return tr({ settings: "settings", history: "history", entry: "summaryViewTitle" }[view]);
 }
 

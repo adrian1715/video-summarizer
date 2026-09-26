@@ -107,7 +107,7 @@ const tr = (key, vars) => t(uiLang, key, vars);
  * have moved, and this is the only way to find out where. */
 const debugging = () => location.hash.includes("ytqs-debug");
 const debug = (...args) => {
-  if (debugging()) console.log("[YT Quick Summary]", ...args);
+  if (debugging()) console.log("[YouTube Quick Summary]", ...args);
 };
 
 /* ---------------------------------------------------------------------------
@@ -741,7 +741,7 @@ function buildModal() {
       h(
         "div",
         { class: "head-text" },
-        h("div", { class: "kicker", text: "YT Quick Summary" }),
+        h("div", { class: "kicker", text: "YouTube Quick Summary" }),
         titleNode,
       ),
       close,
@@ -988,5 +988,5 @@ function requestSummary(videoId, title, force, onChunk) {
 // already open when the extension was (re)loaded, and this is the quickest way
 // to tell that apart from a selector that stopped matching.
 console.log(
-  "[YT Quick Summary] content script ready — append #ytqs-debug to the URL for menu diagnostics",
+  "[YouTube Quick Summary] content script ready — append #ytqs-debug to the URL for menu diagnostics",
 );

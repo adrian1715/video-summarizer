@@ -211,7 +211,7 @@ function logTiming(videoId, elapsedMs, usage, firstTextMs) {
     typeof ms === "number" ? `${(ms / 1000).toFixed(1)}s` : "—";
 
   console.log(
-    `[YT Quick Summary] ${videoId}: ${secs(elapsedMs)} total · ` +
+    `[YouTube Quick Summary] ${videoId}: ${secs(elapsedMs)} total · ` +
       `${secs(firstTextMs)} to first text · ` +
       `prompt ${n(u.promptTokenCount)} · thoughts ${n(u.thoughtsTokenCount)} · ` +
       `output ${n(u.candidatesTokenCount)} · total ${n(u.totalTokenCount)} · ` +
